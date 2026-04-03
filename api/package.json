@@ -1,0 +1,12 @@
+{
+  "name": "azure-vm-explorer-api",
+  "version": "1.0.0",
+  "description": "Proxy API for Azure Retail Prices",
+  "main": "index.js",
+  "scripts": {
+    "start": "func start"
+  },
+  "dependencies": {
+    "node-fetch": "^2.7.0"
+  }
+}
