@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Azure VM SKU Explorer</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Syne:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#f5f4f0;--bg2:#ffffff;--bg3:#ebebea;
+  --border:rgba(0,0,0,0.09);--border2:rgba(0,0,0,0.18);
+  --text:#1a1a18;--text2:#5a5a56;--text3:#8a8a86;
+  --accent:#0078d4;--accent-bg:#e8f2fc;--accent-text:#004a8f;
+  --success-bg:#eaf4e2;--success-text:#2d6a0f;
+  --warn-bg:#fef3e2;--warn-text:#7c4d00;
+  --danger-bg:#fde8e8;--danger-text:#8b1a1a;
+  --tag-bg:#e8e8e5;--radius:8px;--radius-lg:12px;
+}
+[data-theme="dark"] {
+  --bg:#0f0f0e;--bg2:#1c1c1a;--bg3:#252522;
+  --border:rgba(255,255,255,0.08);--border2:rgba(255,255,255,0.15);
+  --text:#f0efe8;--text2:#a0a09a;--text3:#6a6a65;
+  --accent:#4da3ff;--accent-bg:#0d2a45;--accent-text:#7dc4ff;
+  --success-bg:#0e2a06;--success-text:#7acc4a;
+  --warn-bg:#2a1e00;--warn-text:#ffc453;
+  --danger-bg:#2a0808;--danger-text:#ff7a7a;
+  --tag-bg:#2a2a28;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Syne',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;transition:background .2s,color .2s;}
+header{background:var(--bg2);border-bottom:1px solid var(--border);padding:13px 18px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;gap:10px;flex-wrap:wrap;}
+.logo{width:28px;height:28px;background:var(--accent);border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.logo svg{width:17px;height:17px;fill:white;}
+h1{font-size:16px;font-weight:700;letter-spacing:-.3px;}
+.header-left{display:flex;align-items:center;gap:9px;}
+.header-actions{display:flex;align-items:center;gap:7px;flex-wrap:wrap;}
+select{font-family:'Syne',sans-serif;font-size:13px;padding:6px 10px;border:1px solid var(--border2);border-radius:var(--radius);background:var(--bg3);color:var(--text);outline:none;min-width:150px;}
+input[type=text],input[type=number]{font-family:'Syne',sans-serif;font-size:13px;padding:6px 9px;border:1px solid var(--border2);border-radius:var(--radius);background:var(--bg3);color:var(--text);outline:none;}
+input:focus,select:focus{border-color:var(--accent);}
+.btn{font-family:'Syne',sans-serif;font-size:13px;padding:6px 13px;border:1px solid var(--border2);border-radius:var(--radius);background:var(--bg3);color:var(--text);cursor:pointer;white-space:nowrap;transition:background .15s;}
+.btn:hover{background:var(--border);}
+.btn:disabled{opacity:.5;cursor:default;}
+.btn-primary{background:var(--accent);color:white;border-color:var(--accent);}
+.btn-primary:hover{opacity:.88;background:var(--accent);}
+.theme-toggle{width:33px;height:33px;border-radius:50%;border:1px solid var(--border2);background:var(--bg3);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;transition:background .15s;}
+.theme-toggle:hover{background:var(--border);}
+.layout{display:flex;min-height:calc(100vh - 58px);}
+aside{width:266px;min-width:266px;background:var(--bg2);border-right:1px solid var(--border);padding:14px;display:flex;flex-direction:column;gap:14px;overflow-y:auto;max-height:calc(100vh - 58px);position:sticky;top:58px;}
+.filter-section{display:flex;flex-direction:column;gap:7px;}
+.filter-title{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);}
+/* Range + number pairs */
+.range-block{display:flex;flex-direction:column;gap:6px;}
+.range-line{display:flex;flex-direction:column;gap:3px;}
+.range-line-label{font-size:11px;color:var(--text2);font-weight:500;}
+.range-inputs{display:flex;align-items:center;gap:5px;}
+.range-inputs input[type=range]{flex:1;accent-color:var(--accent);height:4px;}
+input[type=number].num-box{width:60px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:12px;padding:4px 6px;}
+.price-filter-row{display:flex;align-items:center;gap:5px;}
+.price-filter-row input[type=range]{flex:1;accent-color:var(--accent);}
+input[type=number].price-box{width:70px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:12px;padding:4px 6px;}
+.series-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px;}
+.series-btn{font-family:'Syne',sans-serif;font-size:10px;font-weight:500;padding:5px 5px;border:1px solid var(--border2);border-radius:var(--radius);background:var(--bg3);color:var(--text2);cursor:pointer;text-align:center;transition:all .12s;line-height:1.3;}
+.series-btn.active{background:var(--accent-bg);border-color:var(--accent);color:var(--accent-text);}
+.price-mode-tabs{display:flex;border:1px solid var(--border2);border-radius:var(--radius);overflow:hidden;}
+.price-tab{flex:1;font-family:'Syne',sans-serif;font-size:11px;font-weight:500;padding:6px 2px;border:none;background:var(--bg3);color:var(--text2);cursor:pointer;text-align:center;transition:all .12s;border-right:1px solid var(--border2);}
+.price-tab:last-child{border-right:none;}
+.price-tab.active{background:var(--accent);color:white;}
+.currency-tabs{display:flex;gap:5px;}
+.currency-btn{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:500;padding:5px 10px;border:1px solid var(--border2);border-radius:var(--radius);background:var(--bg3);color:var(--text2);cursor:pointer;transition:all .12s;}
+.currency-btn.active{background:var(--accent-bg);border-color:var(--accent);color:var(--accent-text);}
+main{flex:1;padding:14px;overflow-x:auto;}
+.toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:11px;gap:8px;flex-wrap:wrap;}
+.result-count{font-size:12px;color:var(--text2);}
+.result-count strong{color:var(--text);font-weight:700;}
+.sort-controls{display:flex;gap:4px;align-items:center;flex-wrap:wrap;}
+.sort-label{font-size:11px;color:var(--text3);}
+.sort-btn{font-family:'Syne',sans-serif;font-size:11px;padding:4px 8px;border:1px solid var(--border2);border-radius:var(--radius);background:var(--bg3);color:var(--text2);cursor:pointer;transition:all .12s;}
+.sort-btn.active{background:var(--accent-bg);border-color:var(--accent);color:var(--accent-text);}
+.stats-bar{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:11px;}
+.stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:9px 12px;}
+.stat-label{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;}
+.stat-value{font-size:17px;font-weight:700;color:var(--text);font-family:'JetBrains Mono',monospace;}
+.loading-state{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:13px;min-height:260px;color:var(--text2);}
+.spinner{width:28px;height:28px;border:3px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.error-state{background:var(--danger-bg);border:1px solid rgba(139,26,26,.2);border-radius:var(--radius-lg);padding:22px;color:var(--danger-text);text-align:center;}
+.proxy-notice{background:var(--warn-bg);border:1px solid rgba(124,77,0,.2);border-radius:var(--radius);padding:8px 11px;font-size:11px;color:var(--warn-text);margin-bottom:10px;}
+table{width:100%;border-collapse:collapse;font-size:12px;background:var(--bg2);border-radius:var(--radius-lg);overflow:hidden;border:1px solid var(--border);}
+thead{background:var(--bg3);border-bottom:1px solid var(--border2);}
+th{padding:8px 10px;text-align:left;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);white-space:nowrap;cursor:pointer;user-select:none;}
+th:hover{color:var(--text);}
+td{padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:var(--bg3);}
+.sku-name{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:500;color:var(--accent-text);}
+.series-badge{display:inline-block;font-size:9px;font-weight:700;padding:1px 5px;border-radius:4px;background:var(--tag-bg);color:var(--text2);margin-left:4px;font-family:'JetBrains Mono',monospace;}
+.price-cell{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:500;}
+.savings-pct{font-size:9px;color:var(--success-text);background:var(--success-bg);padding:1px 4px;border-radius:3px;margin-left:3px;}
+.advice-cell{max-width:190px;}
+.advice-tag{display:inline-block;font-size:9px;font-weight:500;padding:2px 5px;border-radius:8px;margin:1px;background:var(--tag-bg);color:var(--text2);}
+.advice-tag.primary-use{background:var(--accent-bg);color:var(--accent-text);}
+.gpu-badge{font-size:9px;font-weight:700;padding:2px 5px;border-radius:4px;background:#2a1050;color:#c084fc;margin-left:4px;}
+[data-theme="dark"] .gpu-badge{background:#3b1070;color:#e0aaff;}
+.no-results{text-align:center;padding:48px;color:var(--text2);}
+.pagination{display:flex;align-items:center;justify-content:center;gap:5px;margin-top:12px;flex-wrap:wrap;}
+.page-btn{font-family:'JetBrains Mono',monospace;font-size:11px;padding:5px 9px;border:1px solid var(--border2);border-radius:var(--radius);background:var(--bg3);color:var(--text2);cursor:pointer;transition:all .12s;}
+.page-btn.active{background:var(--accent);border-color:var(--accent);color:white;}
+.page-btn:disabled{opacity:.4;cursor:default;}
+.compare-bar{background:var(--bg2);border-top:1px solid var(--border);padding:9px 18px;display:flex;align-items:center;gap:9px;position:sticky;bottom:0;z-index:50;flex-wrap:wrap;}
+.compare-title{font-size:12px;font-weight:700;color:var(--text2);}
+.compare-chip{font-size:10px;font-family:'JetBrains Mono',monospace;padding:3px 8px;border-radius:8px;background:var(--accent-bg);color:var(--accent-text);display:flex;align-items:center;gap:5px;}
+.compare-chip button{border:none;background:none;cursor:pointer;color:var(--accent-text);font-size:13px;padding:0;line-height:1;}
+.compare-action{margin-left:auto;display:flex;gap:5px;}
+@media(max-width:840px){
+  .layout{flex-direction:column;}
+  aside{width:100%;max-height:none;position:static;border-right:none;border-bottom:1px solid var(--border);}
+  .stats-bar{grid-template-columns:repeat(2,1fr);}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <div class="logo">
+      <svg viewBox="0 0 21 21" xmlns="http://www.w3.org/2000/svg">
+        <path d="M10.5 0L21 10.5 10.5 21 0 10.5z" opacity=".5"/>
+        <path d="M10.5 0L21 10.5H0z" opacity=".75"/>
+        <path d="M10.5 0L0 10.5l10.5 10.5z"/>
+      </svg>
+    </div>
+    <h1>Azure VM SKU Explorer</h1>
+  </div>
+  <div class="header-actions">
+    <select id="regionSelect">
+      <option value="eastus">East US</option><option value="eastus2">East US 2</option>
+      <option value="westus">West US</option><option value="westus2">West US 2</option>
+      <option value="westus3">West US 3</option><option value="centralus">Central US</option>
+      <option value="northcentralus">North Central US</option><option value="southcentralus">South Central US</option>
+      <option value="westeurope">West Europe</option><option value="northeurope">North Europe</option>
+      <option value="francecentral" selected>France Central</option>
+      <option value="uksouth">UK South</option><option value="ukwest">UK West</option>
+      <option value="germanywestcentral">Germany West Central</option>
+      <option value="swedencentral">Sweden Central</option><option value="switzerlandnorth">Switzerland North</option>
+      <option value="norwayeast">Norway East</option><option value="polandcentral">Poland Central</option>
+      <option value="italynorth">Italy North</option><option value="spaincentral">Spain Central</option>
+      <option value="southeastasia">Southeast Asia</option><option value="eastasia">East Asia</option>
+      <option value="japaneast">Japan East</option><option value="japanwest">Japan West</option>
+      <option value="koreacentral">Korea Central</option>
+      <option value="australiaeast">Australia East</option><option value="australiasoutheast">Australia Southeast</option>
+      <option value="centralindia">Central India</option><option value="southindia">South India</option>
+      <option value="brazilsouth">Brazil South</option>
+      <option value="canadacentral">Canada Central</option><option value="canadaeast">Canada East</option>
+      <option value="uaenorth">UAE North</option><option value="southafricanorth">South Africa North</option>
+    </select>
+    <button class="btn btn-primary" id="loadBtn" onclick="loadData()">⟳ Charger les prix</button>
+    <button class="theme-toggle" id="themeToggle" title="Dark / Light">🌙</button>
+  </div>
+</header>
+
+<div class="layout">
+  <aside>
+
+    <div class="filter-section">
+      <div class="filter-title">Recherche SKU</div>
+      <input type="text" id="searchBox" style="width:100%" placeholder="Ex: D4s_v5, NC24, B2s…" oninput="applyFilters()">
+    </div>
+
+    <div class="filter-section">
+      <div class="filter-title">Famille de VMs</div>
+      <div class="series-grid" id="seriesGrid"></div>
+      <button class="btn" style="font-size:11px;padding:4px 8px;margin-top:2px" onclick="toggleAllSeries()">Tout / aucun</button>
+    </div>
+
+    <div class="filter-section">
+      <div class="filter-title">vCPU</div>
+      <div class="range-block">
+        <div class="range-line">
+          <div class="range-line-label">Min vCPU</div>
+          <div class="range-inputs">
+            <input type="range" id="cpuMinR" min="1" max="192" value="1" step="1" oninput="syncR2N('cpu','min')">
+            <input type="number" class="num-box" id="cpuMinN" min="1" max="192" value="1" oninput="syncN2R('cpu','min')">
+          </div>
+        </div>
+        <div class="range-line">
+          <div class="range-line-label">Max vCPU</div>
+          <div class="range-inputs">
+            <input type="range" id="cpuMaxR" min="1" max="192" value="192" step="1" oninput="syncR2N('cpu','max')">
+            <input type="number" class="num-box" id="cpuMaxN" min="1" max="192" value="192" oninput="syncN2R('cpu','max')">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="filter-section">
+      <div class="filter-title">RAM (GiB)</div>
+      <div class="range-block">
+        <div class="range-line">
+          <div class="range-line-label">Min RAM</div>
+          <div class="range-inputs">
+            <input type="range" id="ramMinR" min="0" max="6144" value="0" step="1" oninput="syncR2N('ram','min')">
+            <input type="number" class="num-box" id="ramMinN" min="0" max="6144" value="0" oninput="syncN2R('ram','min')">
+          </div>
+        </div>
+        <div class="range-line">
+          <div class="range-line-label">Max RAM</div>
+          <div class="range-inputs">
+            <input type="range" id="ramMaxR" min="0" max="6144" value="6144" step="1" oninput="syncR2N('ram','max')">
+            <input type="number" class="num-box" id="ramMaxN" min="0" max="6144" value="6144" oninput="syncN2R('ram','max')">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="filter-section">
+      <div class="filter-title">Budget max / heure (<span id="priceCurLabel">€</span>)</div>
+      <div class="price-filter-row">
+        <input type="range" id="priceMaxR" min="0" max="50" value="50" step="0.05" oninput="syncR2N('price','max')">
+        <input type="number" class="price-box" id="priceMaxN" min="0" max="9999" step="0.01" placeholder="∞" oninput="syncN2R('price','max')">
+      </div>
+    </div>
+
+    <div class="filter-section">
+      <div class="filter-title">Mode de tarification affiché</div>
+      <div class="price-mode-tabs">
+        <button class="price-tab active" id="tab-payg" onclick="setPriceMode('payg')">PAYG</button>
+        <button class="price-tab" id="tab-ri1" onclick="setPriceMode('ri1')">RI 1 an</button>
+        <button class="price-tab" id="tab-ri3" onclick="setPriceMode('ri3')">RI 3 ans</button>
+      </div>
+    </div>
+
+    <div class="filter-section">
+      <div class="filter-title">Devise</div>
+      <div class="currency-tabs">
+        <button class="currency-btn active" id="cur-EUR" onclick="setCurrency('EUR')">€ EUR</button>
+        <button class="currency-btn" id="cur-USD" onclick="setCurrency('USD')">$ USD</button>
+      </div>
+    </div>
+
+    <div class="filter-section">
+      <div class="filter-title">Options</div>
+      <label style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--text2);cursor:pointer;">
+        <input type="checkbox" id="gpuOnly" onchange="applyFilters()"> GPU uniquement
+      </label>
+      <label style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--text2);cursor:pointer;margin-top:6px;">
+        <input type="checkbox" id="showSpot" onchange="renderTable()"> Colonne Spot
+      </label>
+    </div>
+
+    <button class="btn" style="width:100%;font-size:12px" onclick="resetFilters()">↺ Réinitialiser</button>
+  </aside>
+
+  <main>
+    <div id="proxyNotice" class="proxy-notice" style="display:none">
+      ⚠️ Données via proxy CORS public (<strong>corsproxy.io</strong>). Pour la production, utilisez un proxy propre ou Azure Functions.
+    </div>
+
+    <div class="stats-bar">
+      <div class="stat-card"><div class="stat-label">SKUs trouvés</div><div class="stat-value" id="statCount">—</div></div>
+      <div class="stat-card"><div class="stat-label">Prix min / h</div><div class="stat-value" id="statMin">—</div></div>
+      <div class="stat-card"><div class="stat-label">Prix moyen / h</div><div class="stat-value" id="statAvg">—</div></div>
+      <div class="stat-card"><div class="stat-label">Prix max / h</div><div class="stat-value" id="statMax">—</div></div>
+    </div>
+
+    <div class="toolbar">
+      <div class="result-count" id="resultCount">Sélectionnez une région puis cliquez sur <strong>Charger les prix</strong></div>
+      <div class="sort-controls">
+        <span class="sort-label">Trier :</span>
+        <button class="sort-btn" id="sort-name" onclick="setSort('name')">Nom ↕</button>
+        <button class="sort-btn" id="sort-vcpu" onclick="setSort('vcpu')">vCPU ↕</button>
+        <button class="sort-btn" id="sort-ram" onclick="setSort('ram')">RAM ↕</button>
+        <button class="sort-btn active" id="sort-price" onclick="setSort('price')">Prix ↑</button>
+      </div>
+    </div>
+
+    <div id="loadingEl" class="loading-state" style="display:none">
+      <div class="spinner"></div>
+      <div id="loadingMsg" style="font-size:14px;font-weight:500">Connexion à l'API Azure…</div>
+      <div id="loadingDetail" style="font-size:11px;color:var(--text3)"></div>
+    </div>
+
+    <div id="errorEl" style="display:none"></div>
+
+    <div id="tableWrap" style="display:none">
+      <div style="overflow-x:auto">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:26px"></th>
+              <th onclick="setSort('name')">SKU / Série</th>
+              <th onclick="setSort('vcpu')">vCPU</th>
+              <th onclick="setSort('ram')">RAM (GiB)</th>
+              <th>Temp. (GiB)</th>
+              <th onclick="setSort('price')">PAYG / h</th>
+              <th>RI 1 an / h</th>
+              <th>RI 3 ans / h</th>
+              <th id="spotHeader" style="display:none">Spot / h</th>
+              <th>Usage conseillé</th>
+            </tr>
+          </thead>
+          <tbody id="vmBody"></tbody>
+        </table>
+      </div>
+      <div class="pagination" id="pagination"></div>
+    </div>
+
+    <div id="emptyEl" class="no-results" style="display:none">
+      <div style="font-size:26px;margin-bottom:9px">🔍</div>
+      <div style="font-weight:600">Aucun SKU ne correspond à vos filtres.</div>
+      <div style="font-size:11px;color:var(--text3);margin-top:4px">Essayez d'élargir les critères.</div>
+    </div>
+
+    <div id="welcomeEl" style="text-align:center;padding:48px;color:var(--text2)">
+      <div style="font-size:42px;margin-bottom:12px">☁️</div>
+      <div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:7px">Azure VM SKU Explorer</div>
+      <div style="font-size:13px;max-width:440px;margin:0 auto;line-height:1.8">
+        Sélectionnez une région et cliquez sur <strong>Charger les prix</strong> pour interroger
+        <code style="font-family:'JetBrains Mono',monospace;font-size:11px;background:var(--bg3);padding:2px 5px;border-radius:4px">prices.azure.com</code>
+        en temps réel.<br><br>
+        <span style="font-size:11px;color:var(--text3)">Linux uniquement · Hors promotions · Tarifs publics Microsoft</span>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div class="compare-bar" id="compareBar" style="display:none">
+  <span class="compare-title">Comparer :</span>
+  <div id="compareChips" style="display:flex;gap:5px;flex-wrap:wrap"></div>
+  <div class="compare-action">
+    <button class="btn" style="font-size:12px" onclick="clearCompare()">Effacer</button>
+    <button class="btn btn-primary" style="font-size:12px" onclick="showComparison()">Comparer ↗</button>
+  </div>
+</div>
+
+<script>
+const EUR_RATE = 0.92;
+// Proxy list — tried in order
+const PROXIES = [
+  u => `https://corsproxy.io/?url=${encodeURIComponent(u)}`,
+  u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+  u => u, // direct (works when served from proper domain)
+];
+
+let allVMs=[], filteredVMs=[];
+let sortKey='price', sortDir=1;
+let priceMode='payg', currency='EUR';
+let currentPage=1;
+const PAGE_SIZE=50;
+let compareSet=new Set();
+let activeSeries=new Set();
+let allSeriesOn=true;
+
+const SERIES_INFO={
+  A:{label:'A-series',uses:['Dev/Test','Faible charge']},
+  B:{label:'B-series',uses:['Web apps','Dev/Test','Small DBs']},
+  D:{label:'D-series',uses:['Web','App servers','Caching']},
+  E:{label:'E-series',uses:['SAP HANA','In-memory DB','Analytics']},
+  F:{label:'F-series',uses:['HPC','Batch','Gaming servers']},
+  G:{label:'G-series',uses:['Large DBs','SQL Server']},
+  H:{label:'H-series',uses:['Simulation','Rendering','CFD']},
+  L:{label:'L-series',uses:['NoSQL','Data warehouse','Big Data']},
+  M:{label:'M-series',uses:['SAP HANA','Large in-memory']},
+  N:{label:'N (GPU)',uses:['ML Training','GPU Rendering','CUDA']},
+  X:{label:'X-series',uses:['In-memory OLAP','SAP']},
+};
+
+function getSeriesKey(n){
+  const c=n.replace(/^Standard_|^Basic_/i,'').toUpperCase();
+  const m=c.match(/^([A-Z]+)/);
+  if(!m)return'?';
+  const s=m[1];
+  for(const k of['N','M','H','G','L','X','F','E','D','B','A'])
+    if(s.startsWith(k))return k;
+  return s.charAt(0);
+}
+
+function getUsageAdvice(vm){
+  const info=SERIES_INFO[vm.series]||{};
+  const uses=[...(info.uses||[])];
+  if(vm.vcpu>=32&&!uses.includes('HPC'))uses.push('HPC');
+  if(vm.ram>=128&&!uses.includes('SAP HANA'))uses.push('Mémoire intensive');
+  if(vm.vcpu<=4&&vm.ram<=16)uses.push('Petite charge');
+  return uses.slice(0,4);
+}
+
+function parseSkuName(name){
+  const c=name.replace(/^Standard_|^Basic_/i,'').toUpperCase();
+  const m=c.match(/^([A-Z]+)(\d+)/);
+  if(!m)return{vcpu:null,ram:null};
+  const num=parseInt(m[2]),s=m[1];
+  let ram=num*4;
+  if(s.startsWith('E'))ram=num*8;
+  else if(s.startsWith('M'))ram=num*14;
+  else if(s.startsWith('G'))ram=num*28;
+  else if(s.startsWith('F'))ram=num*2;
+  else if(s.startsWith('A'))ram=num*2;
+  else if(s.startsWith('H'))ram=num*8;
+  else if(s.startsWith('L'))ram=num*8;
+  else if(s.startsWith('N'))ram=num*12;
+  else if(s.startsWith('X'))ram=num*96;
+  return{vcpu:num,ram};
+}
+
+// ─── Fetch with proxy fallback ────────────────────────────────────────────────
+async function fetchJSON(originalUrl){
+  let lastErr;
+  for(let i=0;i<PROXIES.length;i++){
+    try{
+      const url=PROXIES[i](originalUrl);
+      const r=await fetch(url,{signal:AbortSignal.timeout(20000)});
+      if(!r.ok)throw new Error(`HTTP ${r.status}`);
+      const j=await r.json();
+      if(i>0)document.getElementById('proxyNotice').style.display='block';
+      return j;
+    }catch(e){lastErr=e;}
+  }
+  throw lastErr;
+}
+
+async function fetchFilter(filter,key,vmMap,label){
+  let url=`https://prices.azure.com/api/retail/prices?$filter=${encodeURIComponent(filter)}&$top=1000`;
+  let page=0;
+  while(url&&page<10){
+    document.getElementById('loadingDetail').textContent=`${label} — page ${page+1}…`;
+    const data=await fetchJSON(url);
+    for(const item of(data.Items||[])){
+      const arm=item.armSkuName||'';
+      if(!arm||arm.includes('Promo'))continue;
+      if(!vmMap[arm]){
+        vmMap[arm]={
+          name:arm,displayName:item.skuName||'',
+          vcpu:null,ram:null,
+          payg:null,ri1:null,ri3:null,spot:null,
+          series:getSeriesKey(arm),
+          isGpu:/^standard_n[a-z0-9]/i.test(arm)||/^standard_nd/i.test(arm),
+        };
+      }
+      // Keep lowest price per key (avoid duplicates from meters)
+      if(vmMap[arm][key]===null||item.retailPrice<vmMap[arm][key])
+        vmMap[arm][key]=item.retailPrice;
+    }
+    url=data.NextPageLink||null;
+    page++;
+  }
+}
+
+async function fetchAzurePrices(region){
+  const vmMap={};
+  const base=`armRegionName eq '${region}' and serviceName eq 'Virtual Machines' and not contains(skuName,'Windows')`;
+  document.getElementById('loadingMsg').textContent='Récupération PAYG…';
+  await fetchFilter(`${base} and priceType eq 'Consumption'`,'payg',vmMap,'PAYG');
+  document.getElementById('loadingMsg').textContent='Récupération RI 1 an…';
+  await fetchFilter(`${base} and priceType eq 'Reservation' and reservationTerm eq '1 Year'`,'ri1',vmMap,'RI 1 an');
+  document.getElementById('loadingMsg').textContent='Récupération RI 3 ans…';
+  await fetchFilter(`${base} and priceType eq 'Reservation' and reservationTerm eq '3 Years'`,'ri3',vmMap,'RI 3 ans');
+  document.getElementById('loadingMsg').textContent='Récupération Spot…';
+  await fetchFilter(`${base} and priceType eq 'DevTestConsumption'`,'spot',vmMap,'Spot');
+  for(const vm of Object.values(vmMap)){
+    const p=parseSkuName(vm.name);
+    vm.vcpu=p.vcpu; vm.ram=p.ram;
+  }
+  return Object.values(vmMap).filter(v=>v.payg||v.ri1);
+}
+
+async function loadData(){
+  const region=document.getElementById('regionSelect').value;
+  ['welcomeEl','tableWrap','emptyEl','errorEl'].forEach(id=>
+    document.getElementById(id).style.display='none');
+  document.getElementById('proxyNotice').style.display='none';
+  document.getElementById('loadingEl').style.display='flex';
+  document.getElementById('loadBtn').disabled=true;
+  document.getElementById('loadBtn').textContent='Chargement…';
+  try{
+    allVMs=await fetchAzurePrices(region);
+    buildSeriesFilters();
+    applyFilters();
+    document.getElementById('loadingEl').style.display='none';
+    document.getElementById('tableWrap').style.display='block';
+  }catch(e){
+    document.getElementById('loadingEl').style.display='none';
+    document.getElementById('errorEl').style.display='block';
+    document.getElementById('errorEl').innerHTML=`<div class="error-state">
+      <div style="font-size:20px;margin-bottom:7px">⚠️</div>
+      <div style="font-weight:700;margin-bottom:5px">Erreur de chargement</div>
+      <div style="font-size:12px;opacity:.9">${e.message}</div>
+      <div style="font-size:11px;margin-top:10px;opacity:.7;line-height:1.6">
+        Les 3 proxies CORS ont échoué.<br>
+        <strong>Solution :</strong> hébergez cette page sur votre propre domaine (Azure Static Web Apps ou Storage Account).
+        L'API <code>prices.azure.com</code> est alors appelée directement sans proxy.
+      </div>
+    </div>`;
+  }finally{
+    document.getElementById('loadBtn').disabled=false;
+    document.getElementById('loadBtn').textContent='⟳ Charger les prix';
+  }
+}
+
+// ─── Series ───────────────────────────────────────────────────────────────────
+function buildSeriesFilters(){
+  const series=[...new Set(allVMs.map(v=>v.series))].sort();
+  const grid=document.getElementById('seriesGrid');
+  grid.innerHTML='';
+  activeSeries=new Set(series);
+  allSeriesOn=true;
+  for(const s of series){
+    const info=SERIES_INFO[s]||{label:`${s}-series`};
+    const btn=document.createElement('button');
+    btn.className='series-btn active';
+    btn.textContent=info.label;
+    btn.dataset.series=s;
+    btn.onclick=()=>toggleSeries(s,btn);
+    grid.appendChild(btn);
+  }
+}
+function toggleSeries(s,btn){
+  activeSeries.has(s)?activeSeries.delete(s):activeSeries.add(s);
+  btn.classList.toggle('active',activeSeries.has(s));
+  applyFilters();
+}
+function toggleAllSeries(){
+  allSeriesOn=!allSeriesOn;
+  document.querySelectorAll('.series-btn').forEach(btn=>{
+    const s=btn.dataset.series;
+    btn.classList.toggle('active',allSeriesOn);
+    allSeriesOn?activeSeries.add(s):activeSeries.delete(s);
+  });
+  applyFilters();
+}
+
+// ─── Range ↔ number sync ──────────────────────────────────────────────────────
+function syncR2N(type,side){
+  if(type==='cpu'){
+    const v=parseInt(document.getElementById(`cpu${cap(side)}R`).value);
+    document.getElementById(`cpu${cap(side)}N`).value=v;
+    clamp('cpu');
+  }else if(type==='ram'){
+    const v=parseInt(document.getElementById(`ram${cap(side)}R`).value);
+    document.getElementById(`ram${cap(side)}N`).value=v;
+    clamp('ram');
+  }else{
+    const v=parseFloat(document.getElementById('priceMaxR').value);
+    document.getElementById('priceMaxN').value=v>=50?'':v.toFixed(2);
+  }
+  applyFilters();
+}
+function syncN2R(type,side){
+  if(type==='cpu'){
+    let v=parseInt(document.getElementById(`cpu${cap(side)}N`).value)||1;
+    v=Math.max(1,Math.min(192,v));
+    document.getElementById(`cpu${cap(side)}N`).value=v;
+    document.getElementById(`cpu${cap(side)}R`).value=v;
+    clamp('cpu');
+  }else if(type==='ram'){
+    let v=parseInt(document.getElementById(`ram${cap(side)}N`).value)||0;
+    v=Math.max(0,Math.min(6144,v));
+    document.getElementById(`ram${cap(side)}N`).value=v;
+    document.getElementById(`ram${cap(side)}R`).value=v;
+    clamp('ram');
+  }else{
+    const raw=document.getElementById('priceMaxN').value;
+    if(raw===''||parseFloat(raw)>=50){document.getElementById('priceMaxR').value=50;}
+    else{const v=Math.max(0,parseFloat(raw)||0);document.getElementById('priceMaxR').value=Math.min(v,50);}
+  }
+  applyFilters();
+}
+function cap(s){return s.charAt(0).toUpperCase()+s.slice(1);}
+function clamp(type){
+  const mn=parseInt(document.getElementById(`${type}MinN`).value)||0;
+  const mx=parseInt(document.getElementById(`${type}MaxN`).value)||9999;
+  if(mn>mx){
+    document.getElementById(`${type}MinN`).value=mx;
+    document.getElementById(`${type}MinR`).value=mx;
+  }
+}
+
+// ─── Filters ──────────────────────────────────────────────────────────────────
+function applyFilters(){
+  if(!allVMs.length)return;
+  const search=document.getElementById('searchBox').value.toLowerCase();
+  const cpuMin=parseInt(document.getElementById('cpuMinN').value)||1;
+  const cpuMax=parseInt(document.getElementById('cpuMaxN').value)||192;
+  const ramMin=parseInt(document.getElementById('ramMinN').value)||0;
+  const ramMax=parseInt(document.getElementById('ramMaxN').value)||6144;
+  const pRaw=document.getElementById('priceMaxN').value;
+  const pLimit=pRaw===''||parseFloat(pRaw)>=50?Infinity:
+    (currency==='EUR'?parseFloat(pRaw)/EUR_RATE:parseFloat(pRaw));
+  const gpuOnly=document.getElementById('gpuOnly').checked;
+
+  filteredVMs=allVMs.filter(vm=>{
+    if(!activeSeries.has(vm.series))return false;
+    if(search&&!vm.name.toLowerCase().includes(search)&&
+       !vm.displayName.toLowerCase().includes(search))return false;
+    if(vm.vcpu!==null&&(vm.vcpu<cpuMin||vm.vcpu>cpuMax))return false;
+    if(vm.ram!==null&&(vm.ram<ramMin||vm.ram>ramMax))return false;
+    if(gpuOnly&&!vm.isGpu)return false;
+    const p=getCurrentPrice(vm);
+    if(p&&p>pLimit)return false;
+    return true;
+  });
+
+  sortVMs(); updateStats();
+  currentPage=1; renderTable();
+}
+
+function getCurrentPrice(vm){
+  if(priceMode==='ri1')return vm.ri1||vm.payg;
+  if(priceMode==='ri3')return vm.ri3||vm.payg;
+  return vm.payg;
+}
+function sortVMs(){
+  filteredVMs.sort((a,b)=>{
+    if(sortKey==='name')return sortDir*a.name.localeCompare(b.name);
+    const ka=sortKey==='vcpu'?a.vcpu:sortKey==='ram'?a.ram:(getCurrentPrice(a)||9999);
+    const kb=sortKey==='vcpu'?b.vcpu:sortKey==='ram'?b.ram:(getCurrentPrice(b)||9999);
+    return sortDir*((ka||0)-(kb||0));
+  });
+}
+function updateStats(){
+  const n=filteredVMs.length;
+  document.getElementById('statCount').textContent=n;
+  const prices=filteredVMs.map(v=>getCurrentPrice(v)).filter(p=>p&&p>0);
+  const sym=currency==='EUR'?'€':'$';
+  const rate=currency==='EUR'?EUR_RATE:1;
+  if(prices.length){
+    document.getElementById('statMin').textContent=sym+(Math.min(...prices)*rate).toFixed(3);
+    document.getElementById('statAvg').textContent=sym+(prices.reduce((a,b)=>a+b)/prices.length*rate).toFixed(3);
+    document.getElementById('statMax').textContent=sym+(Math.max(...prices)*rate).toFixed(3);
+  }else['statMin','statAvg','statMax'].forEach(id=>document.getElementById(id).textContent='—');
+  document.getElementById('resultCount').innerHTML=`<strong>${n}</strong> SKU${n>1?'s':''} correspondant${n>1?'s':''}`;
+}
+
+// ─── Table ────────────────────────────────────────────────────────────────────
+function renderTable(){
+  const total=filteredVMs.length;
+  const showSpot=document.getElementById('showSpot').checked;
+  document.getElementById('spotHeader').style.display=showSpot?'':'none';
+  if(!total){
+    document.getElementById('tableWrap').style.display=allVMs.length?'none':'block';
+    document.getElementById('emptyEl').style.display=allVMs.length?'block':'none';
+    return;
+  }
+  document.getElementById('tableWrap').style.display='block';
+  document.getElementById('emptyEl').style.display='none';
+  const start=(currentPage-1)*PAGE_SIZE;
+  const page=filteredVMs.slice(start,start+PAGE_SIZE);
+  const sym=currency==='EUR'?'€':'$';
+  const rate=currency==='EUR'?EUR_RATE:1;
+  const fmt=p=>p?`<span class="price-cell">${sym}${(p*rate).toFixed(4)}</span>`:
+    `<span style="color:var(--text3)">N/D</span>`;
+  const sav=(payg,ri)=>{
+    if(!payg||!ri||ri>=payg)return'';
+    return`<span class="savings-pct">-${Math.round((1-ri/payg)*100)}%</span>`;
+  };
+  document.getElementById('vmBody').innerHTML=page.map(vm=>{
+    const uses=getUsageAdvice(vm);
+    const checked=compareSet.has(vm.name)?'checked':'';
+    const gpu=vm.isGpu?`<span class="gpu-badge">GPU</span>`:'';
+    const spotCol=showSpot?`<td>${fmt(vm.spot)}</td>`:'';
+    return`<tr>
+      <td><input type="checkbox" ${checked} onchange="toggleCompare('${vm.name}',this)"></td>
+      <td><span class="sku-name">${vm.name}</span>${gpu}<span class="series-badge">${vm.series}</span></td>
+      <td style="font-family:'JetBrains Mono',monospace;font-weight:500">${vm.vcpu??'?'}</td>
+      <td style="font-family:'JetBrains Mono',monospace;font-weight:500">${vm.ram??'?'}</td>
+      <td style="color:var(--text3);font-size:11px">—</td>
+      <td>${fmt(vm.payg)}</td>
+      <td>${fmt(vm.ri1)}${sav(vm.payg,vm.ri1)}</td>
+      <td>${fmt(vm.ri3)}${sav(vm.payg,vm.ri3)}</td>
+      ${spotCol}
+      <td class="advice-cell">${uses.map((u,i)=>`<span class="advice-tag${i===0?' primary-use':''}">${u}</span>`).join('')}</td>
+    </tr>`;
+  }).join('');
+  renderPagination(total);
+}
+
+function renderPagination(total){
+  const pages=Math.ceil(total/PAGE_SIZE);
+  const p=document.getElementById('pagination');
+  if(pages<=1){p.innerHTML='';return;}
+  let h=`<button class="page-btn" onclick="goPage(${currentPage-1})" ${currentPage===1?'disabled':''}>←</button>`;
+  for(let i=1;i<=pages;i++){
+    if(i===1||i===pages||Math.abs(i-currentPage)<=2)
+      h+=`<button class="page-btn${i===currentPage?' active':''}" onclick="goPage(${i})">${i}</button>`;
+    else if(Math.abs(i-currentPage)===3)h+=`<span style="color:var(--text3);padding:0 3px">…</span>`;
+  }
+  h+=`<button class="page-btn" onclick="goPage(${currentPage+1})" ${currentPage===pages?'disabled':''}>→</button>`;
+  p.innerHTML=h;
+}
+function goPage(p){
+  const pages=Math.ceil(filteredVMs.length/PAGE_SIZE);
+  if(p<1||p>pages)return;
+  currentPage=p; renderTable();
+  document.querySelector('main').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function setSort(key){
+  if(sortKey===key)sortDir*=-1; else{sortKey=key;sortDir=1;}
+  document.querySelectorAll('.sort-btn').forEach(b=>b.classList.remove('active'));
+  const btn=document.getElementById(`sort-${key}`);
+  if(btn){btn.classList.add('active');btn.textContent={name:'Nom',vcpu:'vCPU',ram:'RAM',price:'Prix'}[key]+(sortDir===1?' ↑':' ↓');}
+  if(allVMs.length){sortVMs();renderTable();}
+}
+
+function setPriceMode(m){
+  priceMode=m;
+  ['payg','ri1','ri3'].forEach(t=>document.getElementById(`tab-${t}`).classList.toggle('active',t===m));
+  if(allVMs.length){sortVMs();updateStats();renderTable();}
+}
+function setCurrency(c){
+  currency=c;
+  ['EUR','USD'].forEach(x=>document.getElementById(`cur-${x}`).classList.toggle('active',x===c));
+  document.getElementById('priceCurLabel').textContent=c==='EUR'?'€':'$';
+  if(allVMs.length){updateStats();renderTable();}
+}
+
+// ─── Compare ─────────────────────────────────────────────────────────────────
+function toggleCompare(name,cb){
+  if(cb.checked){
+    if(compareSet.size>=4){cb.checked=false;alert('Maximum 4 SKUs à comparer.');return;}
+    compareSet.add(name);
+  }else compareSet.delete(name);
+  updateCompareBar();
+}
+function updateCompareBar(){
+  const bar=document.getElementById('compareBar');
+  if(!compareSet.size){bar.style.display='none';return;}
+  bar.style.display='flex';
+  document.getElementById('compareChips').innerHTML=[...compareSet].map(n=>
+    `<span class="compare-chip">${n}<button onclick="removeCompare('${n}')">×</button></span>`
+  ).join('');
+}
+function removeCompare(n){compareSet.delete(n);updateCompareBar();renderTable();}
+function clearCompare(){compareSet.clear();updateCompareBar();renderTable();}
+
+function showComparison(){
+  if(compareSet.size<2){alert('Sélectionnez au moins 2 SKUs.');return;}
+  const vms=[...compareSet].map(n=>allVMs.find(v=>v.name===n)).filter(Boolean);
+  const sym=currency==='EUR'?'€':'$';
+  const rate=currency==='EUR'?EUR_RATE:1;
+  const f=p=>p?`${sym}${(p*rate).toFixed(4)}`:'N/D';
+  const rows=[
+    ['vCPU',v=>v.vcpu??'?'],
+    ['RAM (GiB)',v=>v.ram??'?'],
+    ['GPU',v=>v.isGpu?'✅ Oui':'—'],
+    ['PAYG / h',v=>f(v.payg)],
+    ['RI 1 an / h',v=>`${f(v.ri1)}${v.payg&&v.ri1?` (−${Math.round((1-v.ri1/v.payg)*100)}%)`:''}`],
+    ['RI 3 ans / h',v=>`${f(v.ri3)}${v.payg&&v.ri3?` (−${Math.round((1-v.ri3/v.payg)*100)}%)`:''}`],
+    ['Spot / h',v=>f(v.spot)],
+    [`${sym}/vCPU`,v=>v.vcpu&&v.payg?`${sym}${(v.payg*rate/v.vcpu).toFixed(4)}`:'N/D'],
+    [`${sym}/GiB RAM`,v=>v.ram&&v.payg?`${sym}${(v.payg*rate/v.ram).toFixed(4)}`:'N/D'],
+    ['Usage',v=>getUsageAdvice(v).join(', ')],
+  ];
+  document.body.insertAdjacentHTML('beforeend',`
+  <div style="position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:999;display:flex;align-items:center;justify-content:center;padding:16px" onclick="this.remove()">
+    <div style="background:var(--bg2);border-radius:14px;padding:20px;max-width:95vw;overflow:auto;max-height:90vh" onclick="event.stopPropagation()">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <strong style="font-size:15px">Comparaison SKUs</strong>
+        <button onclick="this.closest('[style*=fixed]').remove()" style="border:none;background:none;font-size:20px;cursor:pointer;color:var(--text2)">×</button>
+      </div>
+      <table style="border-collapse:collapse;min-width:380px">
+        <tr style="background:var(--bg3)">
+          <th style="padding:7px 12px;text-align:left;font-size:10px;color:var(--text3);font-weight:700;letter-spacing:.06em;text-transform:uppercase">Critère</th>
+          ${vms.map(v=>`<th style="padding:7px 12px;text-align:left;font-size:10px;color:var(--accent-text);font-family:'JetBrains Mono',monospace">${v.name}</th>`).join('')}
+        </tr>
+        ${rows.map(([l,fn])=>`<tr style="border-top:1px solid var(--border)">
+          <td style="padding:7px 12px;font-size:12px;color:var(--text2);white-space:nowrap">${l}</td>
+          ${vms.map(v=>`<td style="padding:7px 12px;font-size:12px;font-family:'JetBrains Mono',monospace">${fn(v)}</td>`).join('')}
+        </tr>`).join('')}
+      </table>
+      <div style="margin-top:10px;font-size:10px;color:var(--text3)">Cliquez à l'extérieur pour fermer.</div>
+    </div>
+  </div>`);
+}
+
+function resetFilters(){
+  document.getElementById('searchBox').value='';
+  ['cpuMinR','cpuMinN'].forEach(id=>document.getElementById(id).value=1);
+  ['cpuMaxR','cpuMaxN'].forEach(id=>document.getElementById(id).value=192);
+  ['ramMinR','ramMinN'].forEach(id=>document.getElementById(id).value=0);
+  ['ramMaxR','ramMaxN'].forEach(id=>document.getElementById(id).value=6144);
+  document.getElementById('priceMaxR').value=50;
+  document.getElementById('priceMaxN').value='';
+  document.getElementById('gpuOnly').checked=false;
+  document.getElementById('showSpot').checked=false;
+  document.querySelectorAll('.series-btn').forEach(b=>{
+    b.classList.add('active'); activeSeries.add(b.dataset.series);
+  });
+  allSeriesOn=true;
+  applyFilters();
+}
+
+// ─── Theme ────────────────────────────────────────────────────────────────────
+const savedTheme=localStorage.getItem('az-vm-theme')||'light';
+document.documentElement.setAttribute('data-theme',savedTheme);
+document.getElementById('themeToggle').textContent=savedTheme==='dark'?'☀️':'🌙';
+document.getElementById('themeToggle').onclick=()=>{
+  const next=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';
+  document.documentElement.setAttribute('data-theme',next);
+  document.getElementById('themeToggle').textContent=next==='dark'?'☀️':'🌙';
+  localStorage.setItem('az-vm-theme',next);
+};
+</script>
+</body>
+</html>
