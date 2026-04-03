@@ -335,7 +335,7 @@ tr:hover td{background:var(--bg3);}
 <script>
 const EUR_RATE = 0.92;
 // Proxy list — tried in order
-// Direct fetch — CORS autorisé depuis un domaine propre (Azure Static Web Apps)
+// Proxy local via Azure Function (évite les restrictions CORS du navigateur)
 
 let allVMs=[], filteredVMs=[];
 let sortKey='price', sortDir=1;
@@ -397,10 +397,19 @@ function parseSkuName(name){
   return{vcpu:num,ram};
 }
 
-// ─── Fetch direct (prices.azure.com autorise les appels CORS depuis domaines propres) ───
-async function fetchJSON(url){
-  const r=await fetch(url,{signal:AbortSignal.timeout(25000)});
-  if(!r.ok)throw new Error(`HTTP ${r.status} — ${url}`);
+// ─── Fetch via Azure Function proxy (évite le blocage CORS navigateur) ───────
+async function fetchJSON(azureUrl){
+  // Extraire $filter et $top de l'URL Azure originale
+  const parsed = new URL(azureUrl);
+  const filter = parsed.searchParams.get('$filter') || '';
+  const top = parsed.searchParams.get('$top') || '1000';
+  const skipToken = parsed.searchParams.get('$skipToken') || '';
+
+  let proxyUrl = `/api/proxy?$filter=${encodeURIComponent(filter)}&$top=${top}`;
+  if(skipToken) proxyUrl += `&$skipToken=${encodeURIComponent(skipToken)}`;
+
+  const r = await fetch(proxyUrl, {signal: AbortSignal.timeout(30000)});
+  if(!r.ok) throw new Error(`HTTP ${r.status}`);
   return r.json();
 }
 
